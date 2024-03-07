@@ -1,20 +1,21 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+# Self-Hosted ADO Linux Agent Solution
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+This repository contains a solution for deploying self-hosted Azure DevOps (ADO) Linux agents. It includes the following components:
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+- **BaseImage Folder**: Contains the Dockerfile for the base image. This image includes various modules and packages such as PowerShell, Azure CLI (az), Bicep, Terraform, .NET Core (dotnet), Java, Gradle, npm, etc.
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+- **Agent Folder**: Contains the Dockerfile that uses the base image to install the ADO agent and push it to an Azure Container Registry (ACR).
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+- **Bicep Template**: Deploys an Azure Container Instance (ACI) and pulls the agent image to become online in the ADO agent pool.
+
+## Instructions
+
+1. Create a variable group in ADO named "agentsecrets".
+2. Add the Personal Access Token (PAT) named `AZP_PAT` to the variable group.
+3. Update the values in the `.env` file:
+    - `NAME`: Adjust as required.
+    - `AZP_URL`: Update with your ADO organization URL.
+    - `AZP_POOL`: Update with the ADO pool name.
+4. Populate the variables in the `var.yaml` file in the pipeline folder:
+    - Add pipeline variables directly in the ADO pipelines or add them to the variable group created for the PAT token.
+
