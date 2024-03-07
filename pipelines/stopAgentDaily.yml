@@ -1,0 +1,37 @@
+name: Stopping Containers
+
+trigger:
+    none
+
+schedules:
+- cron: "00 21 * * 0-6"
+  displayName: Stop Containers (Monday-Friday)
+  branches:
+    include:
+    - main
+  always: true
+
+pool:
+     vmImage: ubuntu-latest
+
+variables:
+- template: vars/env.yml 
+
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# =-=                                               DON't CHANGE ANYTHING BELOW THIS LINE!!                                                     =-=
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+steps:
+- task: AzureCLI@2
+  displayName: Stop Container Group
+  inputs:
+    azureSubscription: myServicePrincipalName1
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      az container stop \
+        -g "$AZURE_RG" \
+        -n "$ENV_LNX_ACI_CONTAINER_GROUP_NAME" \
+        
+    failOnStdErr: true

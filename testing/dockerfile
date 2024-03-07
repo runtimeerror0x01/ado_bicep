@@ -1,0 +1,89 @@
+# Use ubuntu:latest as the base image for amd64 architecture
+FROM ubuntu:latest
+
+# Set architecture
+ENV ARCH=amd64
+ENV ARCHX=x64
+
+# Update and upgrade package lists
+RUN DEBIAN_FRONTEND=noninteractive apt-get update 
+RUN DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install packages
+RUN apt-get install -y -qq --no-install-recommends \
+        apt-transport-https \
+        ca-certificates \
+        apt-utils \
+        iputils-ping \
+        curl \
+        file \
+        git \
+        gnupg \
+        gnupg-agent \
+        locales \
+        sudo \
+        time \
+        unzip \
+        wget \
+        zip \
+        jq \
+        libcurl4 \
+        netcat \
+        software-properties-common \
+        build-essential \
+        python3 \
+        python3-pip \
+        dnsutils \
+        iputils-ping \
+        openssl \
+        net-tools \
+        lld \
+        libxss1 \
+        libnss3 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libatspi2.0-0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgbm1 \
+        libxkbcommon0 \
+        libpango-1.0-0 \
+        libcairo2 \
+        libatk1.0-0 \
+        default-jdk
+
+
+# Download and install Chrome, Chromedriver & Chrome-headless-shell
+# Update the dowload links for latest versions from // https://chromedriver.chromium.org/downloads/version-selection //
+# Download and install Chrome
+ENV CHROME_DIR /opt/google
+RUN mkdir -p $CHROME_DIR
+RUN wget -q --continue -P $CHROME_DIR "https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-linux64.zip"
+RUN unzip $CHROME_DIR/chrome-l* -d $CHROME_DIR && \
+    chmod +x $CHROME_DIR/chrome-linux64/chrome
+# Download and install Chromedriver
+RUN wget -q --continue -P $CHROME_DIR "https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chromedriver-linux64.zip"
+RUN unzip $CHROME_DIR/chromedriver* -d $CHROME_DIR && \
+    chmod +x $CHROME_DIR/chromedriver-linux64/chromedriver
+RUN wget -q --continue -P $CHROME_DIR "https://storage.googleapis.com/chrome-for-testing-public/122.0.6261.94/linux64/chrome-headless-shell-linux64.zip"
+RUN unzip $CHROME_DIR/chrome-headless* -d $CHROME_DIR && \
+    chmod +x $CHROME_DIR/chrome-headless-shell-linux64/chrome-headless-shell
+# Put Chrome executables into the PATH
+ENV PATH /opt/google/chrome-linux64:$PATH
+ENV PATH /opt/google/chromedriver-linux64:$PATH
+ENV PATH /opt/google/chrome-headless-shell-linux64:$PATH
+
+# Clean apt-get installation packages
+RUN rm -rf /var/lib/apt/lists/* && apt-get clean
+
+# Set locale
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    locale-gen
+
+# Set the default shell to bash for interactive terminals
+ENV SHELL /bin/bash
+
+# Set the entrypoint
+CMD ["sleep", "infinity"]

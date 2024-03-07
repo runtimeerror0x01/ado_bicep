@@ -1,0 +1,33 @@
+trigger:
+     none
+schedules:
+- cron: "0 8 * * 0-5" # First number represent the amount of minutes, second represent the hours. In this case 08:00 Monday - Friday
+  displayName: Stop Self Hosted Agent Container
+  branches:
+    include: 
+    - main
+  always: true
+
+pool:
+     vmImage: ubuntu-latest
+
+variables:
+- template: vars/env.yml 
+
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+# =-=                                               DON't CHANGE ANYTHING BELOW THIS LINE!!                                                     =-=
+# =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+steps:
+- task: AzureCLI@2
+  displayName: Start Container Group
+  inputs:
+    azureSubscription: myServicePrincipalName1
+    scriptType: bash
+    scriptLocation: InlineScript
+    inlineScript: |
+      az container start \
+        -g "$AZURE_RG" \
+        -n "$ENV_LNX_ACI_CONTAINER_GROUP_NAME" 
+        
+    failOnStdErr: true

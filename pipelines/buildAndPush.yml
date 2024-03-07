@@ -1,0 +1,92 @@
+name: Build & Push Linux Image To ACR
+
+trigger:
+  branches:
+    include:
+      - none
+
+variables:    
+  - group: agentsecrets     
+  - template: vars/env.yml  
+  - name: ROOT2
+    value: $(Build.SourcesDirectory)/Infra/aci  
+  - name: LNX_INSTANCES_COUNT
+    value: 1
+
+stages:
+  - stage: build
+    displayName: Build & Push Image to Registry
+    jobs:
+      - job: ACR_Build
+        displayName: Build Linux Agent Image
+        pool:
+          vmImage: ubuntu-latest
+          # name: master-pool
+        steps:
+        - task: AzureCLI@2
+          displayName: Build and Push Image using Azure CLI
+          inputs:
+            azureSubscription: myServicePrincipalName1
+            scriptType: 'bash'
+            scriptLocation: inlineScript
+            inlineScript: |
+              az acr login --name $(ENV_ACR_NAME)
+              az acr build -f $(LNX_AGENT_ROOT)/Dockerfile \
+                          --registry $(ENV_ACR_NAME) $(LNX_AGENT_ROOT) \
+                          --image "ado-agents/ado-agent-linux-amd64:${IMAGE_VERSION}" \
+                          --image "ado-agents/ado-agent-linux-amd64:latest" 
+
+  - stage: DeployAgent
+    displayName: Deploy Linux Self Hosted Agent
+    dependsOn: build
+    jobs:
+      - job: Deploy
+        displayName: Launch Linux Agent Container Instance
+        pool:
+          vmImage: ubuntu-latest
+          # name: master-pool
+        steps:
+          - task: AzureCLI@2
+            displayName: Deploy Linux Agent ACI
+            inputs:
+              azureSubscription: myServicePrincipalName1
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                environmentVariables='[
+                  {"name":"AZP_TOKEN","secureValue":"$(AZP_PAT)"},
+                  {"name":"AZP_URL","value":"$(AZP_URL)"},
+                  {"name":"AZP_POOL","value":"$(AZP_LNX_POOL)"}
+                ]'
+
+                [ -n "$(DNS_SERVERS)" ] && dnsServers="$(DNS_SERVERS)" || dnsServers="[]"
+
+                # deploy ACI
+                az deployment group create \
+                --name deploy-$(ENV_LNX_ACI_CONTAINER_GROUP_NAME) \
+                --resource-group $(AZURE_RG) \
+                --template-file $(ROOT2)/agent_aci.bicep \
+                --parameters image=$(LNX_IMAGE_NAME) \
+                            aciGroupName=$(ENV_LNX_ACI_CONTAINER_GROUP_NAME) \
+                            osType="Linux" \
+                            imageServer=$(ACR_SERVER) \
+                            environmentVariables="$environmentVariables" \
+                            vnetRg=$(AZURE_NETWORK_RG) \
+                            instances=$(LNX_INSTANCES_COUNT) \
+                            spId=$(AZURE_SP_ID) \
+                            dnsServers="$dnsServers" \
+                            spPwd=$(AZURE_SP_PWD)
+
+                        # Restart existing containers in Terminated state!
+                          container_info=$(az container show --resource-group $(AZURE_RG) --name $(ENV_LNX_ACI_CONTAINER_GROUP_NAME) --query 'containers[0].instanceView.currentState')
+                        # Extract the state 
+                          container_state=$(echo "$container_info" | jq -r '.state')
+                          echo "$container_state"
+                          
+                          if [[ "$container_state" == "Terminated" ]]; then
+                            az container start --resource-group $(AZURE_RG) --name $(ENV_LNX_ACI_CONTAINER_GROUP_NAME) 
+                            echo "Restarted Container Group: $(ENV_LNX_ACI_CONTAINER_GROUP_NAME)"
+                          else
+                            echo "Container Group: $(ENV_LNX_ACI_CONTAINER_GROUP_NAME) is not in a stopped state, skipping restart."
+                          fi
+                          
